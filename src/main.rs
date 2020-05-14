@@ -4,8 +4,8 @@ async fn index() -> impl Responder {
     HttpResponse::Ok().body("Hello world!")
 }
 
-async fn index2() -> impl Responder {
-    HttpResponse::Ok().body("Hello world again!")
+async fn ping() -> impl Responder {
+    HttpResponse::Ok().body("{\"value\":\"pong\"}")
 }
 
 #[actix_rt::main]
@@ -14,7 +14,7 @@ async fn main() -> std::io::Result<()> {
     HttpServer::new(|| {
         App::new()
             .route("/", web::get().to(index))
-            .route("/again", web::get().to(index2))
+            .route("/ping", web::get().to(ping))
     })
     // .bind("127.0.0.1:8088")?
     .bind("0.0.0.0:8088")?

@@ -1,6 +1,8 @@
 .DEFAULT_GOAL:=help
 .PHONY: help rust-raw actix go-net go-gin gunicorn-flask
 
+PORT_OPTIONS=_8080='rust-raw', _8088='actix:', _9000='go-net', _9001='go-gin', _5000='gunicorn-flask'
+
 help: ## Show all the available make commands
 	@echo "\n======================================================================================================================================================================="
 	@awk '/```ascii/{a=1; next}/```/{a=0}(a==1){print}' README.md
@@ -32,6 +34,8 @@ gunicorn-flask: ## simple flask/gunicorn server | port 5000
 run-benchmark: ## run wrk
 ifeq ($(PORT),)
 	@echo "please set PORT, example: \`make run-benchmark PORT=5000\`"
+	@echo "Options: "$(PORT_OPTIONS)
 else
 	@wrk -t100 -c100 -d1s http://127.0.0.1:$(PORT)/ping || echo "please install wrk: https://github.com/wg/wrk"
+	@python -c "print 'Results for port $(PORT): ' + dict($(PORT_OPTIONS)).get('_' + '$(PORT)', '')"
 endif

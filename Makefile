@@ -32,7 +32,8 @@ gunicorn-flask: ## run simple flask/gunicorn server
 	cd flask && venv/bin/gunicorn -c gunicorn.conf.py app:app
 
 phoenix: ## run elixir/phoenix server
-	cd elixir/web; mix phoenix.server
+	cd elixir/web; asdf install || echo "You need asdf for elixir and erlang"
+	cd elixir/web; mix deps.get; mix phoenix.server
 
 run-benchmark: ## run wrk for benchmarking
 ifeq ($(PORT),)

@@ -44,7 +44,7 @@ else
 	@python -c "print 'Results for port $(PORT): ' + dict($(PORT_OPTIONS)).get('_' + '$(PORT)', '')"
 endif
 
-phoenix-init: ## generate phoenix app
+phoenix-init:
 	cd elixir; asdf install || echo "You need asdf for elixir and erlang"
 	@echo "the following will probably not work, just copy and paste it manually into your shell"
 	cd elixir; \

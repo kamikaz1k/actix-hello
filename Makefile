@@ -1,7 +1,7 @@
 .DEFAULT_GOAL:=help
-.PHONY: help rust-raw actix go-net go-gin gunicorn-flask
+.PHONY: help rust-raw actix go-net go-gin gunicorn-flask phoenix phoenix-init run-benchmark
 
-PORT_OPTIONS=_8080='rust-raw', _8088='actix:', _9000='go-net', _9001='go-gin', _5000='gunicorn-flask'
+PORT_OPTIONS=_8080='rust-raw', _8088='actix:', _9000='go-net', _9001='go-gin', _5000='gunicorn-flask', _4000='elixir-phoenix'
 
 help: ## Show all the available make commands
 	@echo "\n========================================================================================================================================================================================"
@@ -9,11 +9,11 @@ help: ## Show all the available make commands
 	@echo "=========================================================================================================================================================================================\n"
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
 
-rust-raw: ## run raw rust http
+rust-raw: ## run raw rust http server
 	rustc rust-tcp-server.rs
 	./rust-tcp-server
 
-rocket:
+rocket: ## run rocket server
 	@echo "you probably just wanna run metrix..."
 
 actix: ## run actix-web http server
@@ -31,11 +31,23 @@ gunicorn-flask: ## run simple flask/gunicorn server
 	flask/venv/bin/pip install flask gunicorn
 	cd flask && venv/bin/gunicorn -c gunicorn.conf.py app:app
 
+phoenix: ## run elixir/phoenix server
+	cd elixir/web; mix phoenix.server
+
 run-benchmark: ## run wrk for benchmarking
 ifeq ($(PORT),)
 	@echo "please set PORT, example: \`make run-benchmark PORT=5000\`"
-	@echo "Options: "$(PORT_OPTIONS)
+	@echo "Options:" $(PORT_OPTIONS)
 else
-	@wrk -t100 -c100 -d1s http://127.0.0.1:$(PORT)/ping || echo "please install wrk: https://github.com/wg/wrk"
+	@wrk -t100 -c100 -d30s http://127.0.0.1:$(PORT)/ping || echo "please install wrk: https://github.com/wg/wrk"
 	@python -c "print 'Results for port $(PORT): ' + dict($(PORT_OPTIONS)).get('_' + '$(PORT)', '')"
 endif
+
+phoenix-init: ## generate phoenix app
+	cd elixir; asdf install || echo "You need asdf for elixir and erlang"
+	@echo "the following will probably not work, just copy and paste it manually into your shell"
+	cd elixir; \
+		mix local.hex; \
+		wget https://github.com/phoenixframework/archives/raw/master/phoenix_new.ez; \
+		mix archive.install ./phoenix_new.ez; \
+		mix phoenix.new web --no-brunch --no-ecto;

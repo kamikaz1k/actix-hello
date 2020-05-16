@@ -1,8 +1,5 @@
-use actix_web::{web, App, HttpResponse, HttpServer, Responder};
-
-async fn index() -> impl Responder {
-    HttpResponse::Ok().body("Hello world!")
-}
+// extern crate env_logger;
+use actix_web::{web, middleware, App, HttpResponse, HttpServer, Responder};
 
 async fn ping() -> impl Responder {
     HttpResponse::Ok().body("{\"value\":\"pong\"}")
@@ -10,13 +7,14 @@ async fn ping() -> impl Responder {
 
 #[actix_rt::main]
 async fn main() -> std::io::Result<()> {
-    println!("hello");
+    std::env::set_var("RUST_LOG", "actix_server=info,actix_web=info");
+    env_logger::init();
+
     HttpServer::new(|| {
         App::new()
-            .route("/", web::get().to(index))
+            .wrap(middleware::Logger::default())
             .route("/ping", web::get().to(ping))
     })
-    // .bind("127.0.0.1:8088")?
     .bind("0.0.0.0:8088")?
     .run()
     .await

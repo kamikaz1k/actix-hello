@@ -1,30 +1,71 @@
 use std::net::{TcpStream, TcpListener};
 use std::io::{Read, Write};
 use std::thread;
+use std::fmt;
+use std::time::Instant;
+
+use chrono;
 
 
-fn handle_read(mut stream: &TcpStream) {
+pub struct Request {
+    pub method: String,
+    pub path: String
+}
+
+impl fmt::Display for Request {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "METHOD: `{}` PATH: `{}`", self.method, self.path)
+    }
+}
+
+
+fn handle_read(mut stream: &TcpStream) -> Option<Request> {
     let mut buf = [0u8; 4096];
     match stream.read(&mut buf) {
         Ok(_) => {
             let req_str = String::from_utf8_lossy(&buf);
-            println!("{}", req_str);
-            },
-        Err(e) => println!("Unable to read stream: {}", e),
+            match req_str.split("\n").next() {
+                Some(first_line) => {
+                    let request_params : Vec<&str> = first_line.split(" ").collect();
+                    match request_params.as_slice() {
+                        [] => {
+                            println!("request empty...");
+                            None
+                        },
+                        [method] => {
+                            println!("METHOD {} but route empty...", method);
+                            None
+                        },
+                        [method, path, ..] => Some(Request { method: method.to_string(), path: path.to_string() })
+                    }
+                },
+                None => {
+                    println!("error reading first line of request");
+                    None
+                }
+            }
+        },
+        Err(e) => {
+            println!("Unable to read stream: {}", e);
+            None
+        },
     }
 }
 
 fn handle_write(mut stream: TcpStream) {
-    let response = b"HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=UTF-8\r\n\r\n<html><body>Hello world</body></html>\r\n";
+    let response = b"HTTP/1.1 200 OK\r\nContent-Type: text/json; charset=UTF-8\r\n\r\n{\"value\":\"pong\"}\r\n";
     match stream.write(response) {
-        Ok(n) => println!("Response sent: {} bytes", n),
-        Err(e) => println!("Failed sending response: {}", e),
+        Ok(n) => (),// println!("Response sent: {} bytes", n),
+        Err(e) => (),// println!("Failed sending response: {}", e),
     }
 }
 
 fn handle_client(stream: TcpStream) {
-    handle_read(&stream);
+    let start = Instant::now();
+    let req = handle_read(&stream).unwrap();
+
     handle_write(stream);
+    println!("[INFO] {:?} | 200 | {:3}µs | {} {} ", chrono::Utc::now(), start.elapsed().as_nanos() / 1000, req.method, req.path);
 }
 
 fn main() {

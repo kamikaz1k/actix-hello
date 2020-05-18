@@ -22,6 +22,10 @@ impl fmt::Display for Request {
 fn handle_read(mut stream: &TcpStream) -> Option<Request> {
     let mut buf = [0u8; 4096];
     match stream.read(&mut buf) {
+        Ok(0) => {
+            // println!("Connection closed...?");
+            None
+        },
         Ok(_) => {
             let req_str = String::from_utf8_lossy(&buf);
             match req_str.split("\n").next() {
@@ -54,28 +58,37 @@ fn handle_read(mut stream: &TcpStream) -> Option<Request> {
 
 fn handle_write(mut stream: TcpStream) {
     let response = b"HTTP/1.1 200 OK\r\nContent-Type: text/json; charset=UTF-8\r\n\r\n{\"value\":\"pong\"}\r\n";
-    match stream.write(response) {
-        Ok(n) => (),// println!("Response sent: {} bytes", n),
-        Err(e) => (),// println!("Failed sending response: {}", e),
-    }
+    // match
+    stream.write(response).ok();
+    // {
+    //     Ok(n) =>  println!("Response sent: {} bytes", n),
+    //     Err(e) =>  println!("Failed sending response: {}", e),
+    // }
 }
 
 fn handle_client(stream: TcpStream) {
     let start = Instant::now();
-    let req = handle_read(&stream).unwrap();
+    match handle_read(&stream) {
+        Some(req) => {
+            handle_write(stream);
+            println!("[INFO] {:?} | 200 | {:3}µs | {} {} ", chrono::Utc::now(), start.elapsed().as_nanos() / 1000, req.method, req.path);
+        },
+        None => {
+            // println!("[WARN] {:?} empty stream...", chrono::Utc::now());
+        }
+    }
 
-    handle_write(stream);
-    println!("[INFO] {:?} | 200 | {:3}µs | {} {} ", chrono::Utc::now(), start.elapsed().as_nanos() / 1000, req.method, req.path);
 }
 
 fn main() {
     let port = "8080";
     let listener = TcpListener::bind(format!("127.0.0.1:{}", port)).unwrap();
-    println!("Listening for connections on port {}", port);
+    println!("\nlistening for connections on port {}", port);
 
     for stream in listener.incoming() {
         match stream {
             Ok(stream) => {
+                // handle_client(stream);
                 thread::spawn(|| {
                     handle_client(stream)
                 });
